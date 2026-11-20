@@ -57,7 +57,7 @@ Deck de 12 slides, cerca de 10 minutos. Os tempos são sugestões; os pontos sã
 
 - Comparar os efeitos eleitorais nas coortes definidas pela distância.
 - Alertar para a imprecisão das faixas com poucos pares.
-- No recorte comparável, a estimação ficou indefinida nas faixas 0, 1, 2. No recorte comparável da faixa 3+, o contraste foi de 0,053 p.p. (IC de 95% de 0,004 a 0,102).
+- No recorte comparável, a estimação ficou indefinida nas faixas 0, 1 e 2 por suporte municipal insuficiente; na faixa 3+, o contraste foi de 0,053 p.p. (IC de 95% de 0,004 a 0,102).
 - Não transformar ausência de gradiente em evidência de ausência de efeito.
 
 ## 8. H3 — de onde vem a variação da rede — Rafael (60 s)
