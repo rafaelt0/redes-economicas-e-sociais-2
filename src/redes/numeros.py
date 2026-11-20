@@ -26,7 +26,7 @@ que o texto do relatório e do deck usam.
 import csv
 import math
 import re
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -134,31 +134,114 @@ def pontos_percentuais(v: float, casas: int = 1) -> str:
     return ("+" if v > 0 and not texto.startswith("-") else "") + texto + " p.p."
 
 
-def leitura_h2_comparaveis(linhas: Iterator[dict]) -> str:
+def juntar_lista(itens: list[str]) -> str:
+    if len(itens) <= 1:
+        return "".join(itens)
+    return ", ".join(itens[:-1]) + " e " + itens[-1]
+
+
+def finito(valor: object) -> float | None:
+    if isinstance(valor, bool) or not isinstance(valor, int | float):
+        return None
+    numero = float(valor)
+    return numero if math.isfinite(numero) else None
+
+
+def _motivo_suporte_municipal(motivo: object) -> bool:
+    return isinstance(motivo, str) and "menos de " in motivo and "municípios de um lado" in motivo
+
+
+def _faixa_contraste_h2(linha: dict) -> str | None:
+    categoria = linha.get("categoria")
+    if not isinstance(categoria, str):
+        return None
+    prefixo = "vencedor_faixa_"
+    if not categoria.startswith(prefixo):
+        return None
+    faixa = categoria[len(prefixo) :].strip()
+    return faixa or None
+
+
+def _status_contraste_h2(registros: list[dict], linha: dict) -> str:
+    if linha.get("estimavel"):
+        if all(finito(linha.get(c)) is not None for c in ("estimativa", "ic_inf", "ic_sup")):
+            return "estimavel"
+        return "sem_estimativa"
+    motivo = linha.get("motivo")
+    if _motivo_suporte_municipal(motivo):
+        return "sem_suporte"
+    if motivo == "alguma categoria não é estimável":
+        faixa = _faixa_contraste_h2(linha)
+        if faixa is not None:
+            alvos = {f"faixa_a_{faixa}", f"faixa_b_{faixa}"}
+            falhas = [
+                r
+                for r in registros
+                if r.get("tipo") == "categoria"
+                and not r.get("placebo")
+                and r.get("categoria") in alvos
+                and not r.get("estimavel")
+            ]
+            if falhas and all(_motivo_suporte_municipal(r.get("motivo")) for r in falhas):
+                return "sem_suporte"
+    return "sem_estimativa"
+
+
+def status_comparavel_h2(linhas: Iterable[dict], faixa: str) -> str | None:
+    """Classifica o contraste comparável de H2 em `estimavel`, `sem_suporte` ou `sem_estimativa`."""
+    registros = list(linhas)
+    for linha in registros:
+        if (
+            linha.get("tipo") == "contraste"
+            and not linha.get("placebo")
+            and linha.get("categoria") == f"vencedor_faixa_{faixa}"
+        ):
+            return _status_contraste_h2(registros, linha)
+    return None
+
+
+def leitura_h2_comparaveis(linhas: Iterable[dict]) -> str:
     """Descreve o suporte e os contrastes estimáveis da análise de sensibilidade."""
+    registros = list(linhas)
     estimadas = []
+    sem_suporte = []
     sem_estimativa = []
-    for linha in linhas:
-        if linha["tipo"] != "contraste" or linha["placebo"]:
+    for linha in registros:
+        if linha.get("tipo") != "contraste" or linha.get("placebo"):
             continue
-        faixa = linha["categoria"].rsplit("_", 1)[1]
-        if linha["estimavel"]:
+        faixa = _faixa_contraste_h2(linha)
+        if faixa is None:
+            continue
+        status = _status_contraste_h2(registros, linha)
+        if status == "estimavel":
             efeito, inf, sup = (
-                decimal(100 * linha[c], 3) for c in ("estimativa", "ic_inf", "ic_sup")
+                decimal(100 * float(linha[c]), 3) for c in ("estimativa", "ic_inf", "ic_sup")
             )
             estimadas.append(
-                f"No recorte comparável da faixa {faixa}, o contraste foi de {efeito} p.p. "
-                f"(IC de 95% de {inf} a {sup})."
+                f"na faixa {faixa}, o contraste foi de {efeito} p.p. (IC de 95% de {inf} a {sup})"
             )
+        elif status == "sem_suporte":
+            sem_suporte.append(faixa)
         else:
             sem_estimativa.append(faixa)
-    frases = []
+    partes = []
+    if sem_suporte:
+        faixas = juntar_lista(sem_suporte)
+        recorte = "na faixa" if len(sem_suporte) == 1 else "nas faixas"
+        partes.append(
+            f"a estimação ficou indefinida {recorte} {faixas} por suporte municipal insuficiente"
+        )
     if sem_estimativa:
-        faixas = ", ".join(sem_estimativa)
+        faixas = juntar_lista(sem_estimativa)
         recorte = "na faixa" if len(sem_estimativa) == 1 else "nas faixas"
-        frases.append(f"No recorte comparável, a estimação ficou indefinida {recorte} {faixas}.")
-    frases.extend(estimadas)
-    return " ".join(frases)
+        if sem_suporte:
+            partes.append(f"ficou sem estimativa {recorte} {faixas}")
+        else:
+            partes.append(f"a estimação ficou indefinida {recorte} {faixas}")
+    partes.extend(estimadas)
+    if not partes:
+        return ""
+    return "No recorte comparável, " + "; ".join(partes) + "."
 
 
 def reais_bilhoes(v: float, casas: int = 1) -> str:
@@ -225,15 +308,15 @@ def celulas_da_tabela(caminho: Path) -> Iterator[Celula]:
         return
 
     def numerica(coluna: str) -> bool:
-        textos = [linha[coluna] for linha in linhas if linha[coluna] != ""]
+        textos = [linha[coluna] for linha in linhas if linha.get(coluna)]
         return coluna not in CHAVES_NUMERICAS and bool(textos) and all(map(_eh_numero, textos))
 
     valores = [c for c in colunas if numerica(c)]
     chaves = [c for c in colunas if c not in valores]
     for linha in linhas:
-        k = tuple(linha[c] for c in chaves)
+        k = tuple(linha.get(c) or "" for c in chaves)
         for c in valores:
-            texto = linha[c]
+            texto = linha.get(c) or ""
             valor = float(texto) if texto else math.nan
             yield Celula(caminho.stem, k, c, valor if math.isfinite(valor) else None)
 
