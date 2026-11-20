@@ -115,4 +115,12 @@ Verificação após os ajustes: 208 testes passam e Ruff aprova 58 arquivos. O r
 
 ## Rodada 7
 
-Sol: **9,63/10** (relevância 9,65; redes 9,70; profundidade 9,62; clareza 9,55), com veredito apto. A conferência visual e a reconversão independente do PPTX confirmaram a consistência dos formatos. Foram incorporados os três ajustes pontuais do parecer: “Sem esses empenhos” para a exclusão de pessoal/credor público; RD da diferença de participação pós menos pré; e “sem evidência” de compensação em R3. Relatório e deck recompilados, 15 testes focados e lint aprovados após essas mudanças de redação. DeepSeek ainda em execução nesta rodada; a meta conjunta não é considerada concluída sem esse resultado.
+O primeiro parecer do Sol deu **9,63/10** (relevância 9,65; redes 9,70; profundidade 9,62; clareza 9,55). A conferência visual e a reconversão independente do PPTX confirmaram a consistência dos formatos. A redação explicita a exclusão de empenhos de pessoal ou credor público, o RD da diferença de participação pós menos pré e a falta de evidência de compensação em R3. Relatório e deck recompilados, com 15 testes focados e lint aprovados. O usuário informou que a execução apareceu em Low. Para a meta, vale a avaliação em High da rodada seguinte.
+
+Na reexecução, o DeepSeek deu **9,55/10** (relevância 9,60; redes 9,60; profundidade 9,55; clareza 9,45) e considerou a entrega apta. Conferiu a distinção entre as duas variantes de articulação, a notação da equação e os valores dos quadros e sensibilidades. A revisão foi textual. No parecer, os 99,98% da coorte AMBOS se referem ao empenho prévio. A fração exata do peso municipal continua suprimida no CSV para proteger contagens pequenas.
+
+## Rodada 8 — Sol em High
+
+O [novo parecer do Sol](rodada-8-sol-high.md), enviado com `reasoningEffort: high` no T3, deu **9,60/10** (relevância 9,7, redes 9,8, profundidade 9,6 e clareza 9,3) e considerou o trabalho apto. O Sol revisou os mesmos artefatos enviados ao DeepSeek. As duas médias superaram 9,5.
+
+Após os pareceres, explicitamos o denominador municipal de H3, o fornecimento em pelo menos três dos quatro anos pré-eleitorais para H4 e a unidade do placebo no slide 6. Os CSVs de resultados coincidem com os da versão avaliada. O relatório tem cinco páginas, o deck tem 12 slides no PDF e no PPTX, e o guia soma 600 segundos. Os 15 testes focados e o lint passaram, e a renderização dos slides editados foi conferida.
